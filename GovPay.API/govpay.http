@@ -1,0 +1,18 @@
+GET http://localhost:5232/invoices
+
+###
+
+POST http://localhost:5232/invoices
+Content-Type: application/json
+
+{
+  "payerId": "P123456789",
+  "paymentId": "PAYMENT001",
+  "sellerName": "Jua Kali Shop",
+  "payerName": "John Doe",
+  "invoiceId": "INV-2025-0001",
+  "sellerCode": "SELLER001",
+  "amount": 5000.00,
+  "currency": "TZS",
+  "description": "Land Lease Payment"
+}

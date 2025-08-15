@@ -32,9 +32,12 @@ namespace GovPay.API.Controllers
             // POST create invoice
             group.MapPost("/", async (CreateInvoiceDto dto, GovPayContext db) =>
             {
+                // Will generate the GatewayInvoiceRef using GWY-current year- count
+                var gatewayInvoiceRef = $"GWY-{DateTime.UtcNow:yyyy}-{db.Invoices.Count() + 1}";
+
                 var invoice = new Invoice
                 {
-                    GatewayInvoiceRef = dto.GatewayInvoiceRef,
+                    GatewayInvoiceRef = gatewayInvoiceRef,
                     InvoiceId = dto.InvoiceId,
                     SellerCode = dto.SellerCode,
                     SellerName = dto.SellerName,

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GovPay.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bb2136a3d081350ab70414f893e97ec1c4aacbe2")]
 [assembly: System.Reflection.AssemblyProductAttribute("GovPay.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GovPay.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

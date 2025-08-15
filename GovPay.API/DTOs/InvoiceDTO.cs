@@ -3,7 +3,7 @@ namespace GovPay.API.DTOs
     // Create Invoice DTO
     public record CreateInvoiceDto
     {
-        public string GatewayInvoiceRef { get; init; } = default!;
+        // public string GatewayInvoiceRef { get; init; } = default!;
         public string InvoiceId { get; init; } = default!;
         public string SellerCode { get; init; } = default!;
         public string SellerName { get; init; } = default!;
