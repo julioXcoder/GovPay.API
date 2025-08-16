@@ -2,6 +2,10 @@ GET http://localhost:5232/invoices
 
 ###
 
+GET http://localhost:5232/invoices/GWY-2025-7
+
+###
+
 POST http://localhost:5232/invoices
 Content-Type: application/json
 
@@ -15,4 +19,18 @@ Content-Type: application/json
   "amount": 5000.00,
   "currency": "TZS",
   "description": "Land Lease Payment"
+}
+
+###
+
+POST http://localhost:5232/payments
+Content-Type: application/json
+
+{
+  "paymentRef": "PMT-7788-XYZ",
+  "gatewayInvoiceRef": "GWY-2025-7",
+  "pspCode": "PSP001",
+  "amountPaid": 1000.00,
+  "currency": "TZS",
+  "paymentDate": "2025-01-15T10:00:00Z"
 }

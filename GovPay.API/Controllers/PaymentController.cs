@@ -32,9 +32,22 @@ namespace GovPay.API.Controllers
             // POST create payment
             group.MapPost("/", async (CreatePaymentDto dto, GovPayContext db) =>
             {
+                // 1. Find the invoice related to this payment
+                var invoice = await db.Invoices
+                    .FirstOrDefaultAsync(i => i.GatewayInvoiceRef == dto.GatewayInvoiceRef);
+
+                if (invoice is null)
+                {
+                    return Results.NotFound(new
+                    {
+                        status = "FAILED",
+                        message = "Invoice not found"
+                    });
+                }
+
                 var receiptNumber = $"RCT-{DateTime.UtcNow:yyyy}-{db.Payments.Count() + 1}";
 
-                // 1. Create new payment
+                // 2. Create new payment
                 var payment = new Payment
                 {
                     PaymentRef = dto.PaymentRef,
@@ -50,27 +63,19 @@ namespace GovPay.API.Controllers
                 db.Payments.Add(payment);
                 await db.SaveChangesAsync();
 
-                // 2. Find the invoice related to this payment
-                var invoice = await db.Invoices
-                    .FirstOrDefaultAsync(i => i.GatewayInvoiceRef == dto.GatewayInvoiceRef);
-
-                if (invoice is null)
-                {
-                    return Results.NotFound(new
-                    {
-                        status = "FAILED",
-                        message = "Invoice not found"
-                    });
-                }
+                
 
                 // 3. Calculate the total amount paid so far for this invoice
                 var totalPaid = await db.Payments
                     .Where(p => p.GatewayInvoiceRef == dto.GatewayInvoiceRef)
                     .SumAsync(p => p.AmountPaid);
 
-                // 4. Compare paid vs invoice amount
+                // 4. Compare paid vs invoice amount and update status
                 if (totalPaid >= invoice.Amount)
                 {
+                    invoice.Status = "PAID"; // ✅ Mark as cleared
+                    await db.SaveChangesAsync();
+
                     return Results.Ok(new
                     {
                         status = "SUCCESS",
@@ -82,6 +87,9 @@ namespace GovPay.API.Controllers
                 }
                 else
                 {
+                    invoice.Status = "PARTIALLY_PAID"; // ✅ Mark as partially cleared
+                    await db.SaveChangesAsync();
+
                     return Results.Ok(new
                     {
                         status = "PENDING",
@@ -92,6 +100,7 @@ namespace GovPay.API.Controllers
                     });
                 }
             });
+
 
             // DELETE payment
             group.MapDelete("/{id}", async (string id, GovPayContext db) =>

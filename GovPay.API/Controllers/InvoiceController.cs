@@ -19,15 +19,44 @@ namespace GovPay.API.Controllers
                 return Results.Ok(invoices);
             });
 
-            // GET invoice by ID
-            group.MapGet("/{id}", async (string id, GovPayContext db) =>
+            // GET invoice by gatewayInvoiceRef
+            group.MapGet("/{gatewayInvoiceRef}", async (string gatewayInvoiceRef, GovPayContext db) =>
             {
-                if (!ObjectId.TryParse(id, out var objectId))
-                    return Results.BadRequest("Invalid ObjectId format.");
+                // 1. Find invoice by GatewayInvoiceRef
+                var invoice = await db.Invoices
+                    .FirstOrDefaultAsync(i => i.GatewayInvoiceRef == gatewayInvoiceRef);
 
-                var invoice = await db.Invoices.FindAsync(objectId);
-                return invoice is not null ? Results.Ok(invoice) : Results.NotFound();
+                if (invoice is null)
+                {
+                    return Results.NotFound(new
+                    {
+                        status = "FAILED",
+                        message = "Invoice not found"
+                    });
+                }
+
+                // 2. Get all payments linked to this invoice
+                var payments = await db.Payments
+                    .Where(p => p.GatewayInvoiceRef == gatewayInvoiceRef)
+                    .ToListAsync();
+
+                // 3. Prepare response
+                var result = new
+                {
+                    gatewayInvoiceRef = invoice.GatewayInvoiceRef,
+                    invoiceId = invoice.InvoiceId,
+                    status = invoice.Status,
+                    amount = invoice.Amount,
+                    currency = invoice.Currency,
+                    paymentRefs = payments.Select(p => p.PaymentRef).ToArray(),
+                    clearedDate = invoice.Status == "PAID" 
+                                    ? payments.Max(p => (DateTime?)p.PaymentDate)  // last payment date
+                                    : null
+                };
+
+                return Results.Ok(result);
             });
+
 
             // POST create invoice
             group.MapPost("/", async (CreateInvoiceDto dto, GovPayContext db) =>
