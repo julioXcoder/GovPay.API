@@ -54,7 +54,14 @@ namespace GovPay.API.Controllers
                 db.Invoices.Add(invoice);
                 await db.SaveChangesAsync();
 
-                return Results.Created($"/invoices/{invoice.Id}", invoice);
+                var response = new
+                {
+                    status = "success",
+                    message = "Invoice registered successfully",
+                    gatewayInvoiceRef = invoice.GatewayInvoiceRef
+                };
+
+                return Results.Created($"/invoices/{invoice.Id}", response);
             });
 
             // PUT update invoice

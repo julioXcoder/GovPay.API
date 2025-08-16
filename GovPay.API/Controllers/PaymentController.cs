@@ -32,6 +32,9 @@ namespace GovPay.API.Controllers
             // POST create payment
             group.MapPost("/", async (CreatePaymentDto dto, GovPayContext db) =>
             {
+                var receiptNumber = $"RCT-{DateTime.UtcNow:yyyy}-{db.Payments.Count() + 1}";
+
+                // 1. Create new payment
                 var payment = new Payment
                 {
                     PaymentRef = dto.PaymentRef,
@@ -40,34 +43,54 @@ namespace GovPay.API.Controllers
                     AmountPaid = dto.AmountPaid,
                     Currency = dto.Currency,
                     PaymentDate = dto.PaymentDate,
-                    ReceiptNumber = dto.ReceiptNumber,
+                    ReceiptNumber = receiptNumber,
                     CreatedAt = DateTime.UtcNow
                 };
 
                 db.Payments.Add(payment);
                 await db.SaveChangesAsync();
 
-                return Results.Created($"/payments/{payment.Id}", payment);
-            });
+                // 2. Find the invoice related to this payment
+                var invoice = await db.Invoices
+                    .FirstOrDefaultAsync(i => i.GatewayInvoiceRef == dto.GatewayInvoiceRef);
 
-            // PUT update payment
-            group.MapPut("/{id}", async (string id, UpdatePaymentDto dto, GovPayContext db) =>
-            {
-                if (!ObjectId.TryParse(id, out var objectId))
-                    return Results.BadRequest("Invalid ObjectId format.");
+                if (invoice is null)
+                {
+                    return Results.NotFound(new
+                    {
+                        status = "FAILED",
+                        message = "Invoice not found"
+                    });
+                }
 
-                var payment = await db.Payments.FindAsync(objectId);
-                if (payment is null)
-                    return Results.NotFound();
+                // 3. Calculate the total amount paid so far for this invoice
+                var totalPaid = await db.Payments
+                    .Where(p => p.GatewayInvoiceRef == dto.GatewayInvoiceRef)
+                    .SumAsync(p => p.AmountPaid);
 
-                payment.PspCode = dto.PspCode;
-                payment.AmountPaid = dto.AmountPaid;
-                payment.Currency = dto.Currency;
-                payment.PaymentDate = dto.PaymentDate;
-                payment.ReceiptNumber = dto.ReceiptNumber;
-
-                await db.SaveChangesAsync();
-                return Results.NoContent();
+                // 4. Compare paid vs invoice amount
+                if (totalPaid >= invoice.Amount)
+                {
+                    return Results.Ok(new
+                    {
+                        status = "SUCCESS",
+                        message = "Payment recorded and invoice cleared",
+                        receiptNumber = payment.ReceiptNumber,
+                        totalPaid,
+                        invoiceAmount = invoice.Amount
+                    });
+                }
+                else
+                {
+                    return Results.Ok(new
+                    {
+                        status = "PENDING",
+                        message = "Payment recorded but invoice not fully cleared",
+                        receiptNumber = payment.ReceiptNumber,
+                        totalPaid,
+                        invoiceAmount = invoice.Amount
+                    });
+                }
             });
 
             // DELETE payment
